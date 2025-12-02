@@ -32,6 +32,7 @@ if not CLIENT_ID or not CLIENT_SECRET or not OPENID_URL:
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
 DEBUG = env_bool("FLASK_DEBUG", ENVIRONMENT.startswith("dev"))
+PORT = int(os.getenv("PORT", "5000"))
 
 IS_HTTPS = env_bool("IS_HTTPS", False)
 COOKIE_PREFIX = "__Host-" if IS_HTTPS else ""
@@ -167,7 +168,7 @@ def route_auth_callback():
 
 
 def main():
-    app.run(host="127.0.0.1", port=5000, debug=DEBUG)
+    app.run(host="127.0.0.1", port=PORT, debug=DEBUG)
 
 
 if __name__ == "__main__":

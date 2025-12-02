@@ -23,5 +23,8 @@ export OPENID_URL="https://sso.service.security.gov.uk/.well-known/openid-config
 ## to disable TLS verification use (only for testing purposes)
 # export DISABLE_TLS_VERIFICATION=True
 
+## override default port
+# export PORT=5123
+
 flask run
 ```
