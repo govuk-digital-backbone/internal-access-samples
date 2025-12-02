@@ -1,0 +1,28 @@
+{% extends "_primary.html" %}
+{% block content %}
+    <h1>Welcome</h1>
+    <p>
+        This is a simple Flask application demonstrating OAuth, specifically for <a href="https://sso.service.security.gov.uk/">GOV.UK Internal Access</a>.
+    </p>
+    <p>
+        For more information, visit the <a href="https://github.com/govuk-digital-backbone/internal-access-samples">github.com/govuk-digital-backbone/internal-access-samples</a>.
+    </p>
+    {% if signed_in %}
+        <p>You are signed in as {{ session.user.display_name }}.</p>
+        <p>Your email is {{ session.user.email }}.</p>
+        {% if session.user.picture %}
+            <img src="{{ session.user.picture }}"
+                 alt="Profile Picture"
+                 height="100"
+                 width="100">
+        {% endif %}
+        <p>
+            <a href="{{ url_for('route_signout') }}">Sign Out</a>
+        </p>
+    {% else %}
+        <p>You are not signed in.</p>
+        <p>
+            <a href="{{ url_for('route_signin') }}">Sign In</a>
+        </p>
+    {% endif %}
+{% endblock content %}

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "001-python-flask"
+version = "0.0.1"
+description = "Sample Flask client app demonstrating integration with GOV.UK Internal Access SSO using Authlib."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "OGL-UK-3.0" }
+
+authors = [
+  { name = "GOV.UK Digital Backbone" }
+]
+
+dependencies = [
+  "Flask==3.1.2",
+  "Authlib==1.6.5",
+  "Jinja2==3.1.6",
+  "requests==2.32.5",
+  "certifi==2025.11.12"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=9.0",
+  "pytest-cov>=7.0",
+  "ruff>=0.14",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/govuk-digital-backbone/internal-access-samples"
+"Source"   = "https://github.com/govuk-digital-backbone/internal-access-samples"
