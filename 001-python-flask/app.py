@@ -7,8 +7,10 @@ from flask import Flask, session, url_for, redirect, request, render_template
 from functools import wraps
 from authlib.integrations.flask_client import OAuth
 from datetime import timedelta
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 def env_bool(name: str, default: bool = False) -> bool:
