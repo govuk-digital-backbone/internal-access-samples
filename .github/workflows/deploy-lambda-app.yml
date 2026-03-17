@@ -47,7 +47,8 @@ jobs:
       - name: Build and push Docker image
         run: |
           ECR_URI=$(terraform output -raw ecr_repository_url)
-          docker build -t $ECR_URI:${{ github.sha }} -t $ECR_URI:latest ../../${{ inputs.app_name }}
+          docker pull $ECR_URI:latest || true
+          docker build --cache-from $ECR_URI:latest -t $ECR_URI:${{ github.sha }} -t $ECR_URI:latest ../../${{ inputs.app_name }}
           docker push $ECR_URI:${{ github.sha }}
           docker push $ECR_URI:latest
 
