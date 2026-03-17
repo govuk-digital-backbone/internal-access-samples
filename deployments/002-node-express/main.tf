@@ -16,7 +16,7 @@ variable "image_tag" {
   type    = string
   default = "latest"
 }
-
+name: Deploys
 module "app" {
   source = "../../modules/lambda-app"
 

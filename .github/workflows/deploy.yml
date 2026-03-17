@@ -1,13 +1,13 @@
 ---
 name: Deploys
+permissions:
+  contents: read
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
-permissions: {}
 
 jobs:
   deploy-001-python-flask:
