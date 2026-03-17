@@ -17,6 +17,32 @@ variable "image_tag" {
   default = "latest"
 }
 
+# TODO: remove these import blocks after first successful apply
+import {
+  to = module.app.aws_ecr_repository.app
+  id = "001-python-flask"
+}
+
+import {
+  to = module.app.aws_iam_role.lambda
+  id = "001-python-flask-lambda"
+}
+
+import {
+  to = module.app.aws_lambda_function.app
+  id = "001-python-flask"
+}
+
+import {
+  to = module.app.aws_lambda_function_url.app
+  id = "001-python-flask"
+}
+
+import {
+  to = module.app.aws_lambda_permission.function_url_public
+  id = "001-python-flask/FunctionURLAllowPublicAccess"
+}
+
 module "app" {
   source = "../../modules/lambda-app"
 
