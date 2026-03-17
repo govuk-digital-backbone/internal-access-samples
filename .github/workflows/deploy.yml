@@ -7,6 +7,8 @@ on:
       - main
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   deploy-001-python-flask:
     uses: ./.github/workflows/deploy-lambda-app.yml
