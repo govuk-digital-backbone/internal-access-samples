@@ -22,11 +22,10 @@ module "app" {
 
   app_name       = "001-python-flask"
   image_tag      = var.image_tag
-  ssm_parameters = ["client_id", "client_secret", "flask_secret_key"]
+  ssm_parameters = ["client_id", "client_secret", "flask_secret_key", "openid_url"]
   env_vars = {
     ENVIRONMENT = "prod"
     IS_HTTPS    = "true"
-    OPENID_URL  = "https://sso.service.security.gov.uk/.well-known/openid-configuration"
   }
 }
 
