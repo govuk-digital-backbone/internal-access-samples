@@ -3,7 +3,7 @@ COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 COPY pyproject.toml .
-RUN uv pip install --system --no-cache -e .
+RUN uv pip install --system --no-cache --only-binary :all: -r pyproject.toml
 
 COPY app.py ./
 COPY templates/ templates/
