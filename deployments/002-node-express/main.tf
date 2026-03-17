@@ -22,11 +22,10 @@ module "app" {
 
   app_name       = "002-node-express"
   image_tag      = var.image_tag
-  ssm_parameters = ["client_id", "client_secret", "session_secret"]
+  ssm_parameters = ["client_id", "client_secret", "session_secret", "openid_url"]
   env_vars = {
     ENVIRONMENT = "prod"
     IS_HTTPS    = "true"
-    OPENID_URL  = "https://sso.service.security.gov.uk/.well-known/openid-configuration"
   }
 }
 
