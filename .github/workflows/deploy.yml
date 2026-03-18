@@ -11,7 +11,59 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: aws
+    defaults:
+      run:
+        working-directory: deployments
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Select workspace
+        run: terraform workspace select dev || terraform workspace new dev
+
+      - name: Create ECR repositories
+        env:
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: terraform apply -auto-approve -target=module.app[\"001-python-flask\"].aws_ecr_repository.app -target=module.app[\"002-node-express\"].aws_ecr_repository.app
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker images
+        env:
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: |
+          ECR_URLS=$(terraform output -json ecr_repository_urls)
+          for app_name in $(echo "$ECR_URLS" | jq -r 'keys[]'); do
+            ECR_URI=$(echo "$ECR_URLS" | jq -r --arg app "$app_name" '.[$app]')
+            docker pull $ECR_URI:latest || true
+            docker build --cache-from $ECR_URI:latest \
+              -t $ECR_URI:${{ github.sha }} \
+              -t $ECR_URI:latest \
+              ../$app_name
+            docker push $ECR_URI:${{ github.sha }}
+            docker push $ECR_URI:latest
+          done
+
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment: aws
     strategy:
@@ -47,30 +99,6 @@ jobs:
 
       - name: Select workspace
         run: terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
-
-      - name: Create ECR repositories
-        env:
-          TF_VAR_image_tag: ${{ github.sha }}
-        run: terraform apply -auto-approve -target=module.app
-
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push Docker images
-        env:
-          TF_VAR_image_tag: ${{ github.sha }}
-        run: |
-          ECR_URLS=$(terraform output -json ecr_repository_urls)
-          for app_name in $(echo "$ECR_URLS" | jq -r 'keys[]'); do
-            ECR_URI=$(echo "$ECR_URLS" | jq -r --arg app "$app_name" '.[$app]')
-            docker pull $ECR_URI:latest || true
-            docker build --cache-from $ECR_URI:latest \
-              -t $ECR_URI:${{ github.sha }} \
-              -t $ECR_URI:latest \
-              ../$app_name
-            docker push $ECR_URI:${{ github.sha }}
-            docker push $ECR_URI:latest
-          done
 
       - name: Terraform apply
         env:
