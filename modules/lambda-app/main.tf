@@ -48,10 +48,8 @@ data "aws_ssm_parameter" "params" {
 # ECR
 # ---------------------------------------------------------------------------
 
-resource "aws_ecr_repository" "app" {
-  name                 = var.app_name
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
+data "aws_ecr_repository" "app" {
+  name = var.app_name
 }
 
 # ---------------------------------------------------------------------------
@@ -84,7 +82,7 @@ resource "aws_lambda_function" "app" {
   function_name = local.resource_name
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
+  image_uri     = "${data.aws_ecr_repository.app.repository_url}:${var.image_tag}"
   timeout       = 30
   memory_size   = 256
 
@@ -124,5 +122,5 @@ output "app_url" {
 
 output "ecr_repository_url" {
   description = "ECR repository URL for pushing images"
-  value       = aws_ecr_repository.app.repository_url
+  value       = data.aws_ecr_repository.app.repository_url
 }

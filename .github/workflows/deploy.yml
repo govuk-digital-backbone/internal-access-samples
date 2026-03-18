@@ -35,13 +35,11 @@ jobs:
       - name: Terraform init
         run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
-      - name: Select workspace
-        run: terraform workspace select dev || terraform workspace new dev
-
       - name: Create ECR repositories
-        env:
-          TF_VAR_image_tag: ${{ github.sha }}
-        run: terraform apply -auto-approve -target=module.app[\"001-python-flask\"].aws_ecr_repository.app -target=module.app[\"002-node-express\"].aws_ecr_repository.app
+        run: |
+          for app_dir in ../[0-9][0-9][0-9]-*/; do
+            aws ecr create-repository --repository-name "$(basename "$app_dir")" --region eu-west-2 || true
+          done
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
