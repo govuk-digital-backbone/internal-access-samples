@@ -43,14 +43,13 @@ jobs:
           terraform_wrapper: false
 
       - name: Terraform init
-        run: |
-          terraform init \
-            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ matrix.environment }}/terraform.tfstate"
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Select workspace
+        run: terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
 
       - name: Create ECR repositories
         env:
-          TF_VAR_environment: ${{ matrix.environment }}
           TF_VAR_image_tag: ${{ github.sha }}
         run: terraform apply -auto-approve -target=module.app
 
@@ -59,7 +58,6 @@ jobs:
 
       - name: Build and push Docker images
         env:
-          TF_VAR_environment: ${{ matrix.environment }}
           TF_VAR_image_tag: ${{ github.sha }}
         run: |
           ECR_URLS=$(terraform output -json ecr_repository_urls)
@@ -76,6 +74,5 @@ jobs:
 
       - name: Terraform apply
         env:
-          TF_VAR_environment: ${{ matrix.environment }}
           TF_VAR_image_tag: ${{ github.sha }}
         run: terraform apply -auto-approve

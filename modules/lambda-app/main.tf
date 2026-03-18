@@ -7,15 +7,6 @@ variable "app_name" {
   type        = string
 }
 
-variable "environment" {
-  description = "Deployment environment (dev, staging, prod)"
-  type        = string
-  validation {
-    condition     = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "environment must be one of: dev, staging, prod"
-  }
-}
-
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string
@@ -29,7 +20,7 @@ variable "aws_region" {
 }
 
 variable "ssm_parameters" {
-  description = "Names of SSM parameters to read from /<environment>/<app_name>/<name>"
+  description = "Names of SSM parameters to read from /<workspace>/<app_name>/<name>"
   type        = list(string)
 }
 
@@ -40,7 +31,7 @@ variable "env_vars" {
 }
 
 locals {
-  resource_name = "${var.environment}-${var.app_name}"
+  resource_name = "${terraform.workspace}-${var.app_name}"
 }
 
 # ---------------------------------------------------------------------------
@@ -49,7 +40,7 @@ locals {
 
 data "aws_ssm_parameter" "params" {
   for_each        = toset(var.ssm_parameters)
-  name            = "/${var.environment}/${var.app_name}/${each.key}"
+  name            = "/${terraform.workspace}/${var.app_name}/${each.key}"
   with_decryption = true
 }
 
@@ -101,7 +92,7 @@ resource "aws_lambda_function" "app" {
     variables = merge(
       { for name in var.ssm_parameters : upper(name) => data.aws_ssm_parameter.params[name].value },
       {
-        ENVIRONMENT = var.environment
+        ENVIRONMENT = terraform.workspace
         IS_HTTPS    = "true"
       },
       var.env_vars

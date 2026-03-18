@@ -3,18 +3,13 @@ terraform {
     aws = { source = "hashicorp/aws", version = "~> 5.0" }
   }
   backend "s3" {
+    key    = "terraform.tfstate"
     region = "eu-west-2"
-    # key is supplied via -backend-config in CI: <environment>/terraform.tfstate
   }
 }
 
 provider "aws" {
   region = "eu-west-2"
-}
-
-variable "environment" {
-  description = "Deployment environment (dev, staging, prod)"
-  type        = string
 }
 
 variable "image_tag" {
