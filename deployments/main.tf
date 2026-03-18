@@ -27,21 +27,24 @@ variable "image_tag" {
 locals {
   apps = {
     "001-python-flask" = {
-      ssm_parameters = ["client_id", "client_secret", "flask_secret_key", "openid_url"]
+      ssm_parameters = ["client_id", "client_secret"]
     }
     "002-node-express" = {
-      ssm_parameters = ["client_id", "client_secret", "session_secret", "openid_url"]
+      ssm_parameters = ["client_id", "client_secret"]
     }
   }
+
+  env_ssm_parameters = ["openid_url", "session_secret"]
 }
 
 module "app" {
   for_each = local.apps
   source   = "../modules/lambda-app"
 
-  app_name       = each.key
-  image_tag      = var.image_tag
-  ssm_parameters = each.value.ssm_parameters
+  app_name           = each.key
+  image_tag          = var.image_tag
+  ssm_parameters     = each.value.ssm_parameters
+  env_ssm_parameters = local.env_ssm_parameters
 }
 
 output "app_urls" {

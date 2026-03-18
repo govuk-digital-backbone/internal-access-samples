@@ -24,6 +24,12 @@ variable "ssm_parameters" {
   type        = list(string)
 }
 
+variable "env_ssm_parameters" {
+  description = "Names of SSM parameters shared across apps, read from /<workspace>/<name>"
+  type        = list(string)
+  default     = []
+}
+
 variable "env_vars" {
   description = "Extra environment variables to pass to the Lambda function"
   type        = map(string)
@@ -41,6 +47,12 @@ locals {
 data "aws_ssm_parameter" "params" {
   for_each        = toset(var.ssm_parameters)
   name            = "/${terraform.workspace}/${var.app_name}/${each.key}"
+  with_decryption = true
+}
+
+data "aws_ssm_parameter" "env_params" {
+  for_each        = toset(var.env_ssm_parameters)
+  name            = "/${terraform.workspace}/${each.key}"
   with_decryption = true
 }
 
@@ -89,6 +101,7 @@ resource "aws_lambda_function" "app" {
   environment {
     variables = merge(
       { for name in var.ssm_parameters : upper(name) => data.aws_ssm_parameter.params[name].value },
+      { for name in var.env_ssm_parameters : upper(name) => data.aws_ssm_parameter.env_params[name].value },
       {
         ENVIRONMENT = terraform.workspace
         IS_HTTPS    = "true"

@@ -68,7 +68,7 @@ app.config.update(
     SESSION_COOKIE_SECURE=IS_HTTPS,
     SESSION_COOKIE_SAMESITE="Lax",
     PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
-    SECRET_KEY=os.getenv("FLASK_SECRET_KEY", secrets.token_urlsafe(24)),
+    SECRET_KEY=os.getenv("SESSION_SECRET", secrets.token_urlsafe(24)),
     MAX_CONTENT_LENGTH=120 * 1024 * 1024,
 )
 
