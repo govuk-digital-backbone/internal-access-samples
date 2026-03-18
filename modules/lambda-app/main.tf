@@ -49,7 +49,7 @@ data "aws_ssm_parameter" "params" {
 # ---------------------------------------------------------------------------
 
 resource "aws_ecr_repository" "app" {
-  name                 = local.resource_name
+  name                 = var.app_name
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 }
