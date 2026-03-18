@@ -56,7 +56,7 @@ Add one entry to the `apps` map in `deployments/main.tf`:
 
 ```hcl
 "003-your-app" = {
-  ssm_parameters = ["client_id", "client_secret", "session_secret"]
+  ssm_parameters = ["client_id", "client_secret", "session_secret", "openid_url"]
 }
 ```
 
@@ -71,8 +71,11 @@ for env in dev staging prod; do
   aws ssm put-parameter --name "/$env/003-your-app/client_id"      --value "..." --type SecureString
   aws ssm put-parameter --name "/$env/003-your-app/client_secret"  --value "..." --type SecureString
   aws ssm put-parameter --name "/$env/003-your-app/session_secret" --value "..." --type SecureString
+  aws ssm put-parameter --name "/$env/003-your-app/openid_url"     --value "..." --type String
 done
 ```
+
+The `openid_url` value will differ per environment — check with the Internal Access team for the correct endpoint for each.
 
 ### 5. Register the callback URLs
 

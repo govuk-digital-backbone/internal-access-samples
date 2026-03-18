@@ -45,7 +45,6 @@ module "app" {
   source   = "../modules/lambda-app"
 
   app_name       = each.key
-  environment    = var.environment
   image_tag      = var.image_tag
   ssm_parameters = each.value.ssm_parameters
 }
