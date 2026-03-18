@@ -26,27 +26,28 @@ jobs:
 
       - name: Create ECR repositories
         run: |
-          for app_dir in ../[0-9][0-9][0-9]-*/; do
+          for app_dir in [0-9][0-9][0-9]-*/; do
             aws ecr create-repository --repository-name "$(basename "$app_dir")" --region eu-west-2 || true
           done
 
       - name: Login to ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker images
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          REGISTRY="${ACCOUNT_ID}.dkr.ecr.eu-west-2.amazonaws.com"
-          for app_dir in ../[0-9][0-9][0-9]-*/; do
+          for app_dir in [0-9][0-9][0-9]-*/; do
             APP_NAME=$(basename "$app_dir")
             ECR_URI="${REGISTRY}/${APP_NAME}"
-            docker pull $ECR_URI:latest || true
-            docker build --cache-from $ECR_URI:latest \
-              -t $ECR_URI:${{ github.sha }} \
-              -t $ECR_URI:latest \
-              ../$APP_NAME
-            docker push $ECR_URI:${{ github.sha }}
-            docker push $ECR_URI:latest
+            docker pull "${ECR_URI}:latest" || true
+            docker build --cache-from "${ECR_URI}:latest" \
+              -t "${ECR_URI}:${{ github.sha }}" \
+              -t "${ECR_URI}:latest" \
+              "${APP_NAME}"
+            docker push "${ECR_URI}:${{ github.sha }}"
+            docker push "${ECR_URI}:latest"
           done
 
   deploy:
@@ -72,9 +73,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: eu-west-2
-
-      - name: Check access
-        run: aws sts get-caller-identity
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
