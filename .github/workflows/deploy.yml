@@ -14,9 +14,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: aws
-    defaults:
-      run:
-        working-directory: deployments
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,14 +23,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: eu-west-2
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
-
-      - name: Terraform init
-        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
 
       - name: Create ECR repositories
         run: |
@@ -45,17 +34,17 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker images
-        env:
-          TF_VAR_image_tag: ${{ github.sha }}
         run: |
-          ECR_URLS=$(terraform output -json ecr_repository_urls)
-          for app_name in $(echo "$ECR_URLS" | jq -r 'keys[]'); do
-            ECR_URI=$(echo "$ECR_URLS" | jq -r --arg app "$app_name" '.[$app]')
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.eu-west-2.amazonaws.com"
+          for app_dir in ../[0-9][0-9][0-9]-*/; do
+            APP_NAME=$(basename "$app_dir")
+            ECR_URI="${REGISTRY}/${APP_NAME}"
             docker pull $ECR_URI:latest || true
             docker build --cache-from $ECR_URI:latest \
               -t $ECR_URI:${{ github.sha }} \
               -t $ECR_URI:latest \
-              ../$app_name
+              ../$APP_NAME
             docker push $ECR_URI:${{ github.sha }}
             docker push $ECR_URI:latest
           done
