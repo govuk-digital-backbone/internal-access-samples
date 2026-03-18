@@ -11,14 +11,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-001-python-flask:
+  deploy:
+    strategy:
+      fail-fast: false
+      matrix:
+        app_name:
+          - 001-python-flask
+          - 002-node-express
+        environment:
+          - dev
+          - staging
+          - prod
     uses: ./.github/workflows/deploy-lambda-app.yml
     with:
-      app_name: 001-python-flask
-    secrets: inherit
-
-  deploy-002-node-express:
-    uses: ./.github/workflows/deploy-lambda-app.yml
-    with:
-      app_name: 002-node-express
+      app_name: ${{ matrix.app_name }}
+      environment: ${{ matrix.environment }}
     secrets: inherit

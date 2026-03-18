@@ -18,6 +18,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const OPENID_URL = process.env.OPENID_URL || 'https://sso.service.security.gov.uk/.well-known/openid-configuration';
 const SESSION_SECRET = process.env.SESSION_SECRET;
+const ENVIRONMENT = process.env.ENVIRONMENT || 'dev';
 const IS_HTTPS = (process.env.IS_HTTPS || '').trim().toLowerCase().charAt(0) === 't'
   || (process.env.IS_HTTPS || '').trim().toLowerCase().charAt(0) === '1'
   || (process.env.IS_HTTPS || '').trim().toLowerCase().charAt(0) === 'y';
@@ -64,6 +65,7 @@ app.get('/', (req, res) => {
   res.render('index', {
     signed_in: signedIn,
     user: req.session.user || null,
+    environment: ENVIRONMENT,
   });
 });
 

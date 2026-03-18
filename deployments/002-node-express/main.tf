@@ -3,13 +3,18 @@ terraform {
     aws = { source = "hashicorp/aws", version = "~> 5.0" }
   }
   backend "s3" {
-    key    = "002-node-express/terraform.tfstate"
     region = "eu-west-2"
+    # key is supplied via -backend-config in CI: <environment>/002-node-express/terraform.tfstate
   }
 }
 
 provider "aws" {
   region = "eu-west-2"
+}
+
+variable "environment" {
+  description = "Deployment environment (dev, staging, prod)"
+  type        = string
 }
 
 variable "image_tag" {
@@ -24,7 +29,7 @@ module "app" {
   image_tag      = var.image_tag
   ssm_parameters = ["client_id", "client_secret", "session_secret", "openid_url"]
   env_vars = {
-    ENVIRONMENT = "prod"
+    ENVIRONMENT = var.environment
     IS_HTTPS    = "true"
   }
 }

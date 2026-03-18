@@ -7,6 +7,15 @@ variable "app_name" {
   type        = string
 }
 
+variable "environment" {
+  description = "Deployment environment (dev, staging, prod)"
+  type        = string
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "environment must be one of: dev, staging, prod"
+  }
+}
+
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string
@@ -20,7 +29,7 @@ variable "aws_region" {
 }
 
 variable "ssm_parameters" {
-  description = "Names of SSM parameters to read from /<app_name>/<name>"
+  description = "Names of SSM parameters to read from /<environment>/<app_name>/<name>"
   type        = list(string)
 }
 
@@ -30,13 +39,17 @@ variable "env_vars" {
   default     = {}
 }
 
+locals {
+  resource_name = "${var.environment}-${var.app_name}"
+}
+
 # ---------------------------------------------------------------------------
 # SSM Parameters
 # ---------------------------------------------------------------------------
 
 data "aws_ssm_parameter" "params" {
   for_each        = toset(var.ssm_parameters)
-  name            = "/${var.app_name}/${each.key}"
+  name            = "/${var.environment}/${var.app_name}/${each.key}"
   with_decryption = true
 }
 
@@ -45,7 +58,7 @@ data "aws_ssm_parameter" "params" {
 # ---------------------------------------------------------------------------
 
 resource "aws_ecr_repository" "app" {
-  name                 = var.app_name
+  name                 = local.resource_name
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 }
@@ -55,7 +68,7 @@ resource "aws_ecr_repository" "app" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_role" "lambda" {
-  name = "${var.app_name}-lambda"
+  name = "${local.resource_name}-lambda"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -77,7 +90,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 # ---------------------------------------------------------------------------
 
 resource "aws_lambda_function" "app" {
-  function_name = var.app_name
+  function_name = local.resource_name
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"

@@ -113,6 +113,7 @@ def route_home():
     return render_template(
         "index.html",
         signed_in=signed_in,
+        environment=ENVIRONMENT,
     )
 
 
