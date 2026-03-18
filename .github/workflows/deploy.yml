@@ -12,18 +12,70 @@ on:
 
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+    environment: aws
     strategy:
       fail-fast: false
       matrix:
-        app_name:
-          - 001-python-flask
-          - 002-node-express
         environment:
           - dev
           - staging
           - prod
-    uses: ./.github/workflows/deploy-lambda-app.yml
-    with:
-      app_name: ${{ matrix.app_name }}
-      environment: ${{ matrix.environment }}
-    secrets: inherit
+    defaults:
+      run:
+        working-directory: deployments
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-west-2
+
+      - name: Check access
+        run: aws sts get-caller-identity
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=${{ matrix.environment }}/terraform.tfstate"
+
+      - name: Create ECR repositories
+        env:
+          TF_VAR_environment: ${{ matrix.environment }}
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: terraform apply -auto-approve -target=module.app
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker images
+        env:
+          TF_VAR_environment: ${{ matrix.environment }}
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: |
+          ECR_URLS=$(terraform output -json ecr_repository_urls)
+          for app_name in $(echo "$ECR_URLS" | jq -r 'keys[]'); do
+            ECR_URI=$(echo "$ECR_URLS" | jq -r --arg app "$app_name" '.[$app]')
+            docker pull $ECR_URI:latest || true
+            docker build --cache-from $ECR_URI:latest \
+              -t $ECR_URI:${{ github.sha }} \
+              -t $ECR_URI:latest \
+              ../$app_name
+            docker push $ECR_URI:${{ github.sha }}
+            docker push $ECR_URI:latest
+          done
+
+      - name: Terraform apply
+        env:
+          TF_VAR_environment: ${{ matrix.environment }}
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: terraform apply -auto-approve

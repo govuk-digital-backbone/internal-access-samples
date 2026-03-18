@@ -100,6 +100,10 @@ resource "aws_lambda_function" "app" {
   environment {
     variables = merge(
       { for name in var.ssm_parameters : upper(name) => data.aws_ssm_parameter.params[name].value },
+      {
+        ENVIRONMENT = var.environment
+        IS_HTTPS    = "true"
+      },
       var.env_vars
     )
   }

@@ -12,6 +12,15 @@ This repository contains sample applications demonstrating integration with the 
 | [001-python-flask](001-python-flask/) | Python / Flask |
 | [002-node-express](002-node-express/) | Node.js / Express |
 
+## Environments
+
+Every push to `main` deploys all apps to **dev**, **staging**, and **prod** simultaneously. Each environment is independent:
+
+- Resources are named `<environment>-<app-name>` (e.g. `dev-001-python-flask`)
+- SSM parameters are scoped to `/<environment>/<app-name>/<param>`
+- Terraform state is stored at `<environment>/terraform.tfstate` in the S3 backend bucket
+- The frontend displays a colour-coded banner so it is always clear which environment you are looking at
+
 ## Adding a new sample app
 
 ### 1. Create the app
@@ -20,6 +29,7 @@ Add your app under a new directory, e.g. `003-your-app/`. It must:
 
 - Listen on the port specified by the `PORT` environment variable (default `8080`)
 - Read the following environment variables: `CLIENT_ID`, `CLIENT_SECRET`, `OPENID_URL`, and a session secret of your choosing (e.g. `SESSION_SECRET`)
+- Read `ENVIRONMENT` to display the current environment in the UI (`dev`, `staging`, or `prod`)
 - Implement the OIDC authorisation code flow with the following routes:
   - `GET /` — home page
   - `GET /sign-in` — redirect to the OIDC provider
@@ -40,81 +50,37 @@ ENV PORT=8080
 CMD [<your-start-command>]
 ```
 
-### 3. Create the deployment config
+### 3. Register the app in the deployment config
 
-Create `deployments/003-your-app/main.tf`:
+Add one entry to the `apps` map in `deployments/main.tf`:
 
 ```hcl
-terraform {
-  required_providers {
-    aws = { source = "hashicorp/aws", version = "~> 5.0" }
-  }
-  backend "s3" {
-    key    = "003-your-app/terraform.tfstate"
-    region = "eu-west-2"
-  }
-}
-
-provider "aws" {
-  region = "eu-west-2"
-}
-
-variable "image_tag" {
-  type    = string
-  default = "latest"
-}
-
-module "app" {
-  source = "../../modules/lambda-app"
-
-  app_name       = "003-your-app"
-  image_tag      = var.image_tag
+"003-your-app" = {
   ssm_parameters = ["client_id", "client_secret", "session_secret"]
-  env_vars = {
-    ENVIRONMENT = "prod"
-    IS_HTTPS    = "true"
-    OPENID_URL  = "https://sso.service.security.gov.uk/.well-known/openid-configuration"
-  }
-}
-
-output "app_url" {
-  value = module.app.app_url
-}
-
-output "ecr_repository_url" {
-  value = module.app.ecr_repository_url
 }
 ```
+
+That's it. The app will be built and deployed across all three environments on the next push to `main`.
 
 ### 4. Create the SSM parameters
 
-Run once before deploying:
+Run once per environment before deploying:
 
 ```bash
-aws ssm put-parameter --name "/003-your-app/client_id"      --value "..." --type SecureString
-aws ssm put-parameter --name "/003-your-app/client_secret"  --value "..." --type SecureString
-aws ssm put-parameter --name "/003-your-app/session_secret" --value "..." --type SecureString
+for env in dev staging prod; do
+  aws ssm put-parameter --name "/$env/003-your-app/client_id"      --value "..." --type SecureString
+  aws ssm put-parameter --name "/$env/003-your-app/client_secret"  --value "..." --type SecureString
+  aws ssm put-parameter --name "/$env/003-your-app/session_secret" --value "..." --type SecureString
+done
 ```
 
-### 5. Add to the deployment workflow
+### 5. Register the callback URLs
 
-Add a job to `.github/workflows/deploy.yml`:
-
-```yaml
-deploy-003-your-app:
-  uses: ./.github/workflows/deploy-lambda-app.yml
-  with:
-    app_name: 003-your-app
-  secrets: inherit
-```
-
-### 6. Register the callback URL
-
-After the first deploy, get the app URL:
+After the first deploy, get the app URLs:
 
 ```bash
-cd deployments/003-your-app
-terraform output app_url
+cd deployments
+terraform output -json app_urls | jq '.["003-your-app"]'
 ```
 
-Register `<app_url>/auth/callback` with Internal Acess and then update the SSM parameters with CLIENT_ID and CLIENT_SECRET.
+Register `<app_url>/auth/callback` with Internal Access for each environment, then update the SSM parameters with the corresponding `CLIENT_ID` and `CLIENT_SECRET`.
