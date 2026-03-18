@@ -7,10 +7,15 @@ This repository contains sample applications demonstrating integration with the 
 
 ## Sample apps
 
-| Directory | Description |
-|---|---|
-| [001-python-flask](001-python-flask/) | Python / Flask |
-| [002-node-express](002-node-express/) | Node.js / Express |
+| Environment | Description | URL |
+|---|---|---|
+| prod | Python / Flask | https://6ambnwrmzm2c6jgm6fh3xcsefu0puhsv.lambda-url.eu-west-2.on.aws/ |
+| prod | Node.js / Express | https://33voszsz6yrukuqukklexdqxom0zgvbx.lambda-url.eu-west-2.on.aws/ |
+| staging | Python / Flask | https://aqgtr6grsva2qsxffiyaoqwzi40yzovz.lambda-url.eu-west-2.on.aws/ |
+| staging | Node.js / Express | https://ppbk7d7beuxv2bke3dt2k7ulua0hbvdn.lambda-url.eu-west-2.on.aws/ |
+| dev | Python / Flask | https://lguv6kyr6jdp3um2rvooukrnaq0sjcoy.lambda-url.eu-west-2.on.aws/ |
+| dev | Node.js / Express | https://h5wcfgg4axpm25zgseuy7th4540rcgon.lambda-url.eu-west-2.on.aws/ |
+
 
 ## Environments
 
