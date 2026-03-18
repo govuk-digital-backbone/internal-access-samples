@@ -11,14 +11,81 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-001-python-flask:
-    uses: ./.github/workflows/deploy-lambda-app.yml
-    with:
-      app_name: 001-python-flask
-    secrets: inherit
+  build:
+    runs-on: ubuntu-latest
+    environment: aws
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  deploy-002-node-express:
-    uses: ./.github/workflows/deploy-lambda-app.yml
-    with:
-      app_name: 002-node-express
-    secrets: inherit
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-west-2
+
+      - name: Create ECR repositories
+        run: |
+          for app_dir in [0-9][0-9][0-9]-*/; do
+            aws ecr create-repository --repository-name "$(basename "$app_dir")" --region eu-west-2 || true
+          done
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker images
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          for app_dir in [0-9][0-9][0-9]-*/; do
+            APP_NAME=$(basename "$app_dir")
+            ECR_URI="${REGISTRY}/${APP_NAME}"
+            docker pull "${ECR_URI}:latest" || true
+            docker build --cache-from "${ECR_URI}:latest" \
+              -t "${ECR_URI}:${{ github.sha }}" \
+              -t "${ECR_URI}:latest" \
+              "${APP_NAME}"
+            docker push "${ECR_URI}:${{ github.sha }}"
+            docker push "${ECR_URI}:latest"
+          done
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: aws
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - dev
+          - staging
+          - prod
+    defaults:
+      run:
+        working-directory: deployments
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-west-2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
+
+      - name: Select workspace
+        run: terraform workspace select ${{ matrix.environment }} || terraform workspace new ${{ matrix.environment }}
+
+      - name: Terraform apply
+        env:
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: terraform apply -auto-approve

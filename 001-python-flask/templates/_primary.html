@@ -17,9 +17,21 @@
         main { width: 80%; max-width: 400px; margin: 0 auto; }
         h1 { color: #333; }
         p { color: #666; }
+        .env-banner {
+            padding: 6px 16px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85em;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .env-banner--dev     { background-color: #003078; color: #ffffff; }
+        .env-banner--staging { background-color: #f47738; color: #ffffff; }
+        .env-banner--prod    { background-color: #00703c; color: #ffffff; }
         </style>
     </head>
     <body>
+        <div class="env-banner env-banner--{{ environment }}">{{ environment }} environment</div>
         <main>
             {% block content %}
             {% endblock content %}

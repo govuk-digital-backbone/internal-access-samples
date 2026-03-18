@@ -20,8 +20,14 @@ variable "aws_region" {
 }
 
 variable "ssm_parameters" {
-  description = "Names of SSM parameters to read from /<app_name>/<name>"
+  description = "Names of SSM parameters to read from /<workspace>/<app_name>/<name>"
   type        = list(string)
+}
+
+variable "env_ssm_parameters" {
+  description = "Names of SSM parameters shared across apps, read from /<workspace>/<name>"
+  type        = list(string)
+  default     = []
 }
 
 variable "env_vars" {
@@ -30,13 +36,23 @@ variable "env_vars" {
   default     = {}
 }
 
+locals {
+  resource_name = "${terraform.workspace}-${var.app_name}"
+}
+
 # ---------------------------------------------------------------------------
 # SSM Parameters
 # ---------------------------------------------------------------------------
 
 data "aws_ssm_parameter" "params" {
   for_each        = toset(var.ssm_parameters)
-  name            = "/${var.app_name}/${each.key}"
+  name            = "/${terraform.workspace}/${var.app_name}/${each.key}"
+  with_decryption = true
+}
+
+data "aws_ssm_parameter" "env_params" {
+  for_each        = toset(var.env_ssm_parameters)
+  name            = "/${terraform.workspace}/${each.key}"
   with_decryption = true
 }
 
@@ -44,10 +60,8 @@ data "aws_ssm_parameter" "params" {
 # ECR
 # ---------------------------------------------------------------------------
 
-resource "aws_ecr_repository" "app" {
-  name                 = var.app_name
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
+data "aws_ecr_repository" "app" {
+  name = var.app_name
 }
 
 # ---------------------------------------------------------------------------
@@ -55,7 +69,7 @@ resource "aws_ecr_repository" "app" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_role" "lambda" {
-  name = "${var.app_name}-lambda"
+  name = "${local.resource_name}-lambda"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -77,16 +91,21 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 # ---------------------------------------------------------------------------
 
 resource "aws_lambda_function" "app" {
-  function_name = var.app_name
+  function_name = local.resource_name
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
+  image_uri     = "${data.aws_ecr_repository.app.repository_url}:${var.image_tag}"
   timeout       = 30
   memory_size   = 256
 
   environment {
     variables = merge(
       { for name in var.ssm_parameters : upper(name) => data.aws_ssm_parameter.params[name].value },
+      { for name in var.env_ssm_parameters : upper(name) => data.aws_ssm_parameter.env_params[name].value },
+      {
+        ENVIRONMENT = terraform.workspace
+        IS_HTTPS    = "true"
+      },
       var.env_vars
     )
   }
@@ -116,5 +135,5 @@ output "app_url" {
 
 output "ecr_repository_url" {
   description = "ECR repository URL for pushing images"
-  value       = aws_ecr_repository.app.repository_url
+  value       = data.aws_ecr_repository.app.repository_url
 }
