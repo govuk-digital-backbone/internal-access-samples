@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Build directories
+dist/
+
+# Test results
+coverage/
+
+# Playwright
+integration-tests/node_modules/
+integration-tests/test-results/
+integration-tests/playwright-report/
+integration-tests/blob-report/
+integration-tests/playwright/.cache/
+integration-tests/playwright/.auth/
+integration-tests/.features-gen/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
+
+# Terraform outputs
+infra/.terraform
+infra/.terraform.lock.hcl

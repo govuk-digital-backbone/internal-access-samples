@@ -1,0 +1,26 @@
+
+<h1>Welcome</h1>
+<p>
+    This is a simple Express application demonstrating OAuth, specifically for <a href="https://sso.service.security.gov.uk/">GOV.UK Internal Access</a>.
+</p>
+<p>
+    For more information, visit the <a href="https://github.com/govuk-digital-backbone/internal-access-samples">github.com/govuk-digital-backbone/internal-access-samples</a>.
+</p>
+{% if signed_in %}
+    <p>You are signed in as {{user.display_name}}.</p>
+    <p>Your email is {{user.email}}.</p>
+    {% if user.picture %}
+        <img src={{user.picture}}
+                alt="Profile Picture"
+                height="100"
+                width="100">
+    {% endif %}
+    <p>
+        <a href="/sign-out">Sign Out</a>
+    </p>
+{% else %}
+    <p>You are not signed in.</p>
+    <p>
+        <a href="/sign-in">Sign In</a>
+    </p>
+{% endif %}
